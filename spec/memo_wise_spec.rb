@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require "byebug"
 require "values"
 
 RSpec.describe MemoWise do
@@ -272,6 +273,108 @@ RSpec.describe MemoWise do
 
       expect(instance.no_args_counter).to eq(1)
       expect(instance2.no_args_counter).to eq(0)
+    end
+
+    context "when memo_wise has *not* been called on a *class* method" do
+      it "does *not* create class-level instance variable" do
+        expect(class_with_memo.instance_variables).not_to include(:@_memo_wise)
+      end
+    end
+
+    context "with class methods" do
+      let(:class_with_memo) do
+        Class.new do
+          prepend MemoWise
+
+          def self.class_method_counter
+            @class_method_counter || 0
+          end
+
+          def self.self_dot_class_method(a, b: "default") # rubocop:disable Naming/MethodParameterName
+            @class_method_counter = class_method_counter + 1
+            "self_dot_class_method: a=#{a}, b=#{b}"
+          end
+          memo_wise :self_dot_class_method
+
+          class << self
+            prepend MemoWise
+
+            def scoped_class_method(a, b: "default") # rubocop:disable Naming/MethodParameterName
+              @class_method_counter = class_method_counter + 1
+              "scoped_class_method: a=#{a}, b=#{b}"
+            end
+            memo_wise :scoped_class_method
+          end
+        end
+      end
+
+      context "when defined with 'def self.'" do
+        let(:class_with_memo) do
+          Class.new do
+            prepend MemoWise
+
+            def self.class_method_counter
+              @class_method_counter || 0
+            end
+
+            def self.self_dot_class_method(a, b: "default") # rubocop:disable Naming/MethodParameterName
+            @class_method_counter = class_method_counter + 1
+            "self_dot_class_method: a=#{a}, b=#{b}"
+            end
+            memo_wise :self_dot_class_method
+          end
+        end
+
+        it "memoizes class methods defined with 'def self.'" do
+          expect(Array.new(4) { class_with_memo.self_dot_class_method(1, b: 2) }).
+            to all eq("self_dot_class_method: a=1, b=2")
+
+          expect(Array.new(4) { class_with_memo.self_dot_class_method(1, b: 3) }).
+            to all eq("self_dot_class_method: a=1, b=3")
+
+          expect(class_with_memo.class_method_counter).to eq(2)
+        end
+
+        it "creates a class-level instance variable" do
+          # NOTE: test implementation detail to ensure the inverse test is valid
+          expect(class_with_memo.instance_variables).to include(:@_memo_wise)
+        end
+      end
+
+      context "when defined with scope 'class << self'" do
+        let(:class_with_memo) do
+          Class.new do
+            class << self
+              prepend MemoWise
+
+              def class_method_counter
+                @class_method_counter || 0
+              end
+
+              def scoped_class_method(a, b: "default") # rubocop:disable Naming/MethodParameterName
+                @class_method_counter = class_method_counter + 1
+                "scoped_class_method: a=#{a}, b=#{b}"
+              end
+              memo_wise :scoped_class_method
+            end
+          end
+        end
+
+        it "memoizes class methods defined with scope 'class << self'" do
+          expect(Array.new(4) { class_with_memo.scoped_class_method(1, b: 2) }).
+            to all eq("scoped_class_method: a=1, b=2")
+
+          expect(Array.new(4) { class_with_memo.scoped_class_method(1, b: 3) }).
+            to all eq("scoped_class_method: a=1, b=3")
+
+          expect(class_with_memo.class_method_counter).to eq(2)
+        end
+
+        it "creates a class-level instance variable" do
+          # NOTE: this test ensure the inverse test above continues to be valid
+          expect(class_with_memo.instance_variables).to include(:@_memo_wise)
+        end
+      end
     end
 
     context "with private methods" do
