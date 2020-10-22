@@ -851,4 +851,59 @@ RSpec.describe MemoWise do
       end
     end
   end
+
+  context "private APIs" do
+    context ".method_info" do
+      subject { described_class.method_info(klass, :method_name) }
+
+      context "when klass is neither Class nor Module" do
+        let(:klass) { "not a class" }
+        it { expect { subject }.to raise_error(ArgumentError) }
+      end
+    end
+
+    context ".method_visibility" do
+      subject { described_class.method_visibility(String, method_name) }
+
+      context "when method_name not a method on klass" do
+        let(:method_name) { :not_a_method }
+        it { expect { subject }.to raise_error(ArgumentError) }
+      end
+    end
+
+    context ".original_class_from_singleton" do
+      subject { described_class.original_class_from_singleton(klass) }
+
+      context "when klass is not a singleton class" do
+        let(:klass) { String }
+        it { expect { subject }.to raise_error(ArgumentError) }
+      end
+
+      context "when klass is a singleton class of an original class" do
+        let(:klass) { original_class.singleton_class }
+
+        context "assigned to a constant (normal case)" do
+          let(:original_class) { String }
+          it { is_expected.to eq(String) }
+        end
+
+        context "not assigned to a constant (anonymous case)" do
+          let(:original_class) { class_with_memo }
+          it { is_expected.to eq(class_with_memo) }
+        end
+      end
+    end
+
+    context ".create_memo_wise_state!" do
+      subject { described_class.create_memo_wise_state!(obj) }
+
+      context "when obj already has instance variable '@_memo_wise'" do
+        let(:obj) do
+          Object.new.tap { |o| o.instance_variable_set(:@_memo_wise, 42) }
+        end
+
+        it { expect { subject }.to raise_error(ArgumentError) }
+      end
+    end
+  end
 end
