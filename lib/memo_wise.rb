@@ -238,6 +238,7 @@ module MemoWise # rubocop:disable Metrics/ModuleLength
     #     class of `Foo` will return "#<Class:Foo>" from `#to_s` method.
     name = klass.to_s.match(/#<Class:([^>]+)>/)&.[](1)
     raise NameError if name.nil?
+
     Object.const_get(name) # raises NameError if not found
   rescue NameError
     # Option 2: Search ObjectSpace
@@ -284,10 +285,10 @@ module MemoWise # rubocop:disable Metrics/ModuleLength
   #     prepend MemoWise
   #   end
   #
-  def self.prepended(target)
+  def self.prepended(target) # rubocop:disable Metrics/PerceivedComplexity
     class << target
       # NOTE: See YARD docs for {.memo_wise} directly below this method!
-      def memo_wise(method_name)
+      def memo_wise(method_name) # rubocop:disable Metrics/PerceivedComplexity
         scope, visibility, klass, method =
           MemoWise.method_info(self, method_name)
 

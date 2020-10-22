@@ -290,20 +290,20 @@ RSpec.describe MemoWise do
               @class_method_counter || 0
             end
 
-            def self.self_dot_class_method(a, b: "default") # rubocop:disable Naming/MethodParameterName
-            @class_method_counter = class_method_counter + 1
-            "self_dot_class_method: a=#{a}, b=#{b}"
+            def self.self_dot_method(a, b: "default") # rubocop:disable Naming/MethodParameterName
+              @class_method_counter = class_method_counter + 1
+              "self_dot_method: a=#{a}, b=#{b}"
             end
-            memo_wise :self_dot_class_method
+            memo_wise :self_dot_method
           end
         end
 
         it "memoizes class methods defined with 'def self.'" do
-          expect(Array.new(4) { class_with_memo.self_dot_class_method(1, b: 2) }).
-            to all eq("self_dot_class_method: a=1, b=2")
+          expect(Array.new(4) { class_with_memo.self_dot_method(1, b: 2) }).
+            to all eq("self_dot_method: a=1, b=2")
 
-          expect(Array.new(4) { class_with_memo.self_dot_class_method(1, b: 3) }).
-            to all eq("self_dot_class_method: a=1, b=3")
+          expect(Array.new(4) { class_with_memo.self_dot_method(1, b: 3) }).
+            to all eq("self_dot_method: a=1, b=3")
 
           expect(class_with_memo.class_method_counter).to eq(2)
         end
@@ -324,21 +324,21 @@ RSpec.describe MemoWise do
                 @class_method_counter || 0
               end
 
-              def scoped_class_method(a, b: "default") # rubocop:disable Naming/MethodParameterName
+              def class_self_method(a, b: "default") # rubocop:disable Naming/MethodParameterName
                 @class_method_counter = class_method_counter + 1
-                "scoped_class_method: a=#{a}, b=#{b}"
+                "class_self_method: a=#{a}, b=#{b}"
               end
-              memo_wise :scoped_class_method
+              memo_wise :class_self_method
             end
           end
         end
 
         it "memoizes class methods defined with scope 'class << self'" do
-          expect(Array.new(4) { class_with_memo.scoped_class_method(1, b: 2) }).
-            to all eq("scoped_class_method: a=1, b=2")
+          expect(Array.new(4) { class_with_memo.class_self_method(1, b: 2) }).
+            to all eq("class_self_method: a=1, b=2")
 
-          expect(Array.new(4) { class_with_memo.scoped_class_method(1, b: 3) }).
-            to all eq("scoped_class_method: a=1, b=3")
+          expect(Array.new(4) { class_with_memo.class_self_method(1, b: 3) }).
+            to all eq("class_self_method: a=1, b=3")
 
           expect(class_with_memo.class_method_counter).to eq(2)
         end
@@ -826,43 +826,48 @@ RSpec.describe MemoWise do
     end
   end
 
-  context "private APIs" do
-    context ".method_info" do
+  describe "private APIs" do
+    describe ".method_info" do
       subject { described_class.method_info(klass, :method_name) }
 
       context "when klass is neither Class nor Module" do
         let(:klass) { "not a class" }
+
         it { expect { subject }.to raise_error(ArgumentError) }
       end
     end
 
-    context ".method_visibility" do
+    describe ".method_visibility" do
       subject { described_class.method_visibility(String, method_name) }
 
       context "when method_name not a method on klass" do
         let(:method_name) { :not_a_method }
+
         it { expect { subject }.to raise_error(ArgumentError) }
       end
     end
 
-    context ".original_class_from_singleton" do
+    describe ".original_class_from_singleton" do
       subject { described_class.original_class_from_singleton(klass) }
 
       context "when klass is not a singleton class" do
         let(:klass) { String }
+
         it { expect { subject }.to raise_error(ArgumentError) }
       end
 
       context "when klass is a singleton class of an original class" do
         let(:klass) { original_class.singleton_class }
 
-        context "assigned to a constant (normal case)" do
+        context "when assigned to a constant (normal case)" do
           let(:original_class) { String }
+
           it { is_expected.to eq(original_class) }
         end
 
-        context "not assigned to a constant (anonymous case)" do
+        context "when not assigned to a constant (anonymous case)" do
           let(:original_class) { class_with_memo }
+
           it { is_expected.to eq(original_class) }
 
           context "when singleton class #to_s convention not followed" do
@@ -878,7 +883,7 @@ RSpec.describe MemoWise do
       end
     end
 
-    context ".create_memo_wise_state!" do
+    describe ".create_memo_wise_state!" do
       subject { described_class.create_memo_wise_state!(obj) }
 
       context "when obj already has instance variable '@_memo_wise'" do
