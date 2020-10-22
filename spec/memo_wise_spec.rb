@@ -281,32 +281,6 @@ RSpec.describe MemoWise do
     end
 
     context "with class methods" do
-      let(:class_with_memo) do
-        Class.new do
-          prepend MemoWise
-
-          def self.class_method_counter
-            @class_method_counter || 0
-          end
-
-          def self.self_dot_class_method(a, b: "default") # rubocop:disable Naming/MethodParameterName
-            @class_method_counter = class_method_counter + 1
-            "self_dot_class_method: a=#{a}, b=#{b}"
-          end
-          memo_wise :self_dot_class_method
-
-          class << self
-            prepend MemoWise
-
-            def scoped_class_method(a, b: "default") # rubocop:disable Naming/MethodParameterName
-              @class_method_counter = class_method_counter + 1
-              "scoped_class_method: a=#{a}, b=#{b}"
-            end
-            memo_wise :scoped_class_method
-          end
-        end
-      end
-
       context "when defined with 'def self.'" do
         let(:class_with_memo) do
           Class.new do
@@ -884,12 +858,22 @@ RSpec.describe MemoWise do
 
         context "assigned to a constant (normal case)" do
           let(:original_class) { String }
-          it { is_expected.to eq(String) }
+          it { is_expected.to eq(original_class) }
         end
 
         context "not assigned to a constant (anonymous case)" do
           let(:original_class) { class_with_memo }
-          it { is_expected.to eq(class_with_memo) }
+          it { is_expected.to eq(original_class) }
+
+          context "when singleton class #to_s convention not followed" do
+            let(:klass) do
+              super().tap do |sc|
+                sc.define_singleton_method(:to_s) { "not following convention" }
+              end
+            end
+
+            it { is_expected.to eq(original_class) }
+          end
         end
       end
     end
